@@ -1,12 +1,14 @@
-FROM golang:1.14.4-alpine AS build
+FROM golang:1.20rc1-alpine3.17 AS build
 
 WORKDIR /app
 
-COPY go.mod ./
-COPY go.sum ./
-RUN go mod download
+RUN apk add --update alpine-sdk
 
-COPY *.go ./
+ADD go.mod .
+
+COPY . .
+RUN go get ./...
+RUN go mod download
 
 RUN go build -o main
 
@@ -14,5 +16,9 @@ FROM alpine
 
 WORKDIR /app
 COPY ./config.yaml .
+
+COPY ./secrets ./secrets
+COPY ./templates ./templates
+
 COPY --from=build /app/main main
 CMD ["./main", "./config.yaml"]
