@@ -11,6 +11,9 @@ services:
       - "${PWD}/acme.json:/acme.json "
     networks:
       - web
+    ports:
+      - 80:80
+      - 443:443
 
 networks:
   web:
