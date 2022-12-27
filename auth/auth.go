@@ -22,7 +22,7 @@ type Auth struct {
 	RefreshExpired time.Duration
 	ChangeExpires  time.Duration
 	ChatExpires    time.Duration
-	RefreshLength  int
+	RefreshLength  uint
 
 	DB db.DB
 }
@@ -69,7 +69,7 @@ func (a Auth) GenerateRefresh() string {
 	allowedLength := len(allowed)
 
 	res := make([]rune, a.RefreshLength)
-	for i := 0; i < a.RefreshLength; i++ {
+	for i := uint(0); i < a.RefreshLength; i++ {
 		res[i] = allowed[rand.Intn(allowedLength)]
 	}
 	return string(res)

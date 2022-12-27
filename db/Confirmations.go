@@ -1,7 +1,8 @@
 package db
 
 import (
-	"fmt"
+	"BackendSimple/Sender"
+	"context"
 	"gorm.io/gorm"
 	"math/rand"
 	"time"
@@ -61,25 +62,15 @@ func (c *Confirmation) GenerateConfirmation(expired time.Duration) {
 func (c *Confirmation) GenerateCode() {
 	c.Code = 1000 + rand.Intn(8999)
 }
-
-func (c *Confirmation) SendPhone(phone string) error {
-	fmt.Printf("Confirmation send on Phone: %s;\nAction: %s\nCode: %d\n", phone, c.ActionString, c.Code)
-	return nil
-}
-func (c *Confirmation) SendEmail(email string) error {
-	fmt.Printf("Confirmation send on Email: %s;\nAction: %s\nCode: %d\n", email, c.ActionString, c.Code)
-	return nil
-}
-
-func (db *DB) CreateConfirmation(c *Confirmation, value string, expired time.Duration) error {
+func (db *DB) CreateConfirmation(c *Confirmation, u User, expired time.Duration) error {
 	c.GenerateConfirmation(expired)
 	if c.Type == EmailConfirmationType {
-		err := c.SendEmail(value)
-		if err != nil {
-			return err
-		}
-	} else if c.Type == PhoneConfirmationType {
-		err := c.SendPhone(value)
+		err := db.Sender.SendEmail(context.Background(), Sender.EmailMessage{
+			UserName:  u.Name,
+			Type:      c.Action,
+			Code:      c.Code,
+			Recipient: u.Email,
+		})
 		if err != nil {
 			return err
 		}

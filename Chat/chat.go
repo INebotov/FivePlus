@@ -12,7 +12,8 @@ type Chat struct {
 	Auth auth.Auth
 	DB   db.DB
 
-	Rooms map[string]*Room
+	Rooms        map[string]*Room
+	clientParams ClientParams
 }
 
 func Drop400Error(w http.ResponseWriter) {
@@ -125,7 +126,7 @@ func (c *Chat) ServeWs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := newClient(conn, user, room, l)
+	client := newClient(conn, user, room, l, c.clientParams)
 	client.ExitFunc = c.GetExitFunc(roomID[0])
 	room.register <- client
 }
@@ -142,12 +143,13 @@ func (c *Chat) GetExitFunc(roomid string) func() error {
 	}
 }
 
-func NewChat(db db.DB, auth auth.Auth) Chat {
+func NewChat(db db.DB, auth auth.Auth, clientParams ClientParams) Chat {
 	return Chat{
 		Auth: auth,
 		DB:   db,
 
-		Rooms: make(map[string]*Room),
+		Rooms:        make(map[string]*Room),
+		clientParams: clientParams,
 	}
 }
 

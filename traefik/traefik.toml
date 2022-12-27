@@ -1,0 +1,23 @@
+[entryPoints]
+    [entryPoints.http]
+        address = ":80"
+        [entryPoints.http.http.redirections.entryPoint]
+            to = "https"
+            scheme = "https"
+    [entryPoints.https]
+        address = ":443"
+
+[api]
+    dashboard = true
+
+[certificatesResolvers.letsencrypt.acme]
+    email = "ivannebotov@justnets.ru"
+    storage = "acme.json"
+    [certificatesResolvers.letsencrypt.acme.tlsChallenge]
+
+[providers.docker]
+    watch = true
+    network = "web"
+
+[providers.file]
+    filename = "traefik_dynamic.toml"

@@ -1,0 +1,92 @@
+version: '3.5'
+
+volumes:
+  backend_db:
+    driver: local
+  backend_db_admin:
+    driver: local
+
+networks:
+  web:
+    external: true
+  back:
+    external: false
+  crm:
+    external: true
+
+services:
+  backend:
+    build:
+      context: .
+    container_name: backend
+    networks:
+      - crm
+      - web
+      - back
+    restart: unless-stopped
+    depends_on:
+      backend_db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 6G
+    links:
+      - backend_db:db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`fiveplus.justnets.ru`)"
+      - "traefik.http.routers.backend.entrypoints=https"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend.service=backend"
+      - "traefik.http.services.backend.loadbalancer.server.port=80"
+
+  backend_db:
+    image: postgres
+    restart: unless-stopped
+    container_name: backend_db
+    env_file:
+      - ./secrets/backend_db.env
+    networks:
+      - back
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U habrpguser -d habrdb" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - "backend_db:/var/lib/postgresql/data"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 4G
+
+  backend_db_admin:
+    container_name: backend_db_admin
+    image: dpage/pgadmin4:5.7
+    env_file:
+      - ./secrets/backend_db.env
+    volumes:
+      - "./backend_db_admin:/var/lib/pgadmin"
+    depends_on:
+      backend_db:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+    networks:
+      - back
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend_db_admin.rule=Host(`dbadmin.fiveplus.justnets.ru`)"
+      - "traefik.http.routers.backend_db_admin.entrypoints=https"
+      - "traefik.http.routers.backend_db_admin.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend_db_admin.service=backend_db_admin"
+      - "traefik.http.services.backend_db_admin.loadbalancer.server.port=80"

@@ -90,7 +90,6 @@ func (h Handlers) DeleteChildSend(c *fiber.Ctx) error {
 	}
 
 	var conf db.Confirmation
-	var value string
 	var ex time.Duration
 	if confirmThru == db.EmailConfirmationType {
 		conf = db.Confirmation{
@@ -98,13 +97,12 @@ func (h Handlers) DeleteChildSend(c *fiber.Ctx) error {
 			Type:   db.EmailConfirmationType,
 			Action: db.DeteteChildAction,
 		}
-		value = userMy.Email
 		ex = h.EmailConfExpired
 	} else {
 		return Drop400Error(c)
 	}
 
-	err = h.DB.CreateConfirmation(&conf, value, ex)
+	err = h.DB.CreateConfirmation(&conf, userMy, ex)
 	if err != nil {
 		return Drop500Error(c, err)
 	}

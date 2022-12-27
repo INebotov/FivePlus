@@ -9,20 +9,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const (
-	// Max wait time when writing message to peer
-	writeWait = 10 * time.Second
-
-	// Max time till next pong from peer
-	pongWait = 60 * time.Second
-
-	// Send ping interval, must be less then pong wait time
-	pingPeriod = (pongWait * 9) / 10
-
-	// Maximum message size allowed from peer.
-	maxMessageSize = 10000
-)
-
 var (
 	newline = []byte{'\n'}
 	space   = []byte{' '}
@@ -41,9 +27,19 @@ type Client struct {
 	Name     string          `json:"name"`
 	room     *Room           `json:"-"`
 	ExitFunc func() error    `json:"-"`
+
+	ClientParams
 }
 
-func newClient(conn *websocket.Conn, u db.User, room *Room, Lesson db.Lesson) *Client {
+type ClientParams struct {
+	WriteWait      time.Duration
+	PongWait       time.Duration
+	PingPeriod     time.Duration
+	MaxMessageSize int64
+}
+
+func newClient(conn *websocket.Conn, u db.User, room *Room, Lesson db.Lesson, params ClientParams) *Client {
+	params.PingPeriod = (params.PongWait * 9) / 10
 	client := Client{
 		ID:       u.ID,
 		Name:     u.Name,
@@ -51,6 +47,8 @@ func newClient(conn *websocket.Conn, u db.User, room *Room, Lesson db.Lesson) *C
 		send:     make(chan []byte, 256),
 		room:     room,
 		LessonID: Lesson.ID,
+
+		ClientParams: params,
 	}
 	go client.writePump()
 	go client.readPump()
@@ -63,9 +61,9 @@ func (client *Client) readPump() {
 		client.disconnect()
 	}()
 
-	client.conn.SetReadLimit(maxMessageSize)
-	client.conn.SetReadDeadline(time.Now().Add(pongWait))
-	client.conn.SetPongHandler(func(string) error { client.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	client.conn.SetReadLimit(client.MaxMessageSize)
+	client.conn.SetReadDeadline(time.Now().Add(client.PongWait))
+	client.conn.SetPongHandler(func(string) error { client.conn.SetReadDeadline(time.Now().Add(client.PongWait)); return nil })
 
 	for {
 		_, jsonMessage, err := client.conn.ReadMessage()
@@ -82,15 +80,18 @@ func (client *Client) readPump() {
 }
 
 func (client *Client) writePump() {
-	ticker := time.NewTicker(pingPeriod)
+	ticker := time.NewTicker(client.PingPeriod)
 	defer func() {
+		for c := range client.room.clients {
+			c.room.unregister <- c
+		}
 		ticker.Stop()
 		client.conn.Close()
 	}()
 	for {
 		select {
 		case message, ok := <-client.send:
-			client.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			client.conn.SetWriteDeadline(time.Now().Add(client.WriteWait))
 			if !ok {
 				client.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
@@ -112,7 +113,7 @@ func (client *Client) writePump() {
 				return
 			}
 		case <-ticker.C:
-			client.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			client.conn.SetWriteDeadline(time.Now().Add(client.WriteWait))
 			if err := client.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}

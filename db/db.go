@@ -1,6 +1,7 @@
 package db
 
 import (
+	"BackendSimple/Sender"
 	"fmt"
 	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
@@ -25,7 +26,6 @@ type DBParams struct {
 	Host     string
 	User     string
 	Password string
-	DbName   string
 	TimeZone string
 	Port     int
 	SslMode  bool
@@ -36,13 +36,15 @@ type DB struct {
 
 	Params DBParams
 	Engine *gorm.DB
+	Sender Sender.EmailSender
 }
 
-func GetDB(Params DBParams) (DB, error) {
+func GetDB(Params DBParams, sender Sender.EmailSender) (DB, error) {
 	var err error
 	db := DB{
 		Params: Params,
 		ID:     (uuid.New()).String(),
+		Sender: sender,
 	}
 	if Params.Type == TypePostgres {
 		err = db.InitPostgres()
@@ -69,7 +71,7 @@ func (db *DB) InitPostgres() error {
 		sslMode = "enable"
 	}
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=%s",
-		db.Params.Host, db.Params.User, db.Params.Password, db.Params.DbName, db.Params.Port, sslMode, db.Params.TimeZone)
+		db.Params.Host, db.Params.User, db.Params.Password, db.Params.Name, db.Params.Port, sslMode, db.Params.TimeZone)
 	var err error
 	db.Engine, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {

@@ -211,7 +211,6 @@ func (h Handlers) SelfChangeSendCode(c *fiber.Ctx) error {
 	}
 
 	var conf db.Confirmation
-	var value string
 	var ex time.Duration
 	if confirmThru == db.EmailConfirmationType {
 		conf = db.Confirmation{
@@ -219,13 +218,12 @@ func (h Handlers) SelfChangeSendCode(c *fiber.Ctx) error {
 			Type:   db.EmailConfirmationType,
 			Action: db.ProfileSecretsChangeConfirmationAction,
 		}
-		value = userMy.Email
 		ex = h.EmailConfExpired
 	} else {
 		return Drop400Error(c)
 	}
 
-	err = h.DB.CreateConfirmation(&conf, value, ex)
+	err = h.DB.CreateConfirmation(&conf, userMy, ex)
 	if err != nil {
 		return Drop500Error(c, err)
 	}
@@ -351,7 +349,7 @@ func (h Handlers) SelfConfirmSend(c *fiber.Ctx) error {
 			Type:   db.EmailConfirmationType,
 			Action: db.RegistrationConfirmationAction,
 		}
-		err = h.DB.CreateConfirmation(&Emailconf, user.Email, h.EmailConfExpired)
+		err = h.DB.CreateConfirmation(&Emailconf, user, h.EmailConfExpired)
 		if err != nil {
 			return Drop500Error(c, err)
 		}
