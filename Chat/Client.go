@@ -20,13 +20,14 @@ var upgrader = websocket.Upgrader{
 }
 
 type Client struct {
-	conn     *websocket.Conn `json:"-"`
-	send     chan []byte     `json:"-"`
-	ID       uint            `json:"id"`
-	LessonID uint            `json:"lesson_id"`
-	Name     string          `json:"name"`
-	room     *Room           `json:"-"`
-	ExitFunc func() error    `json:"-"`
+	conn           *websocket.Conn `json:"-"`
+	send           chan []byte     `json:"-"`
+	ID             uint            `json:"id"`
+	LessonID       uint            `json:"lesson_id"`
+	Name           string          `json:"name"`
+	room           *Room           `json:"-"`
+	ExitFunc       func() error    `json:"-"`
+	AddMessageFunc func(m *db.Message) error
 
 	ClientParams
 }
@@ -138,6 +139,17 @@ func (client *Client) handleNewMessage(jsonMessage []byte) {
 
 	switch message.Action {
 	case SendMessageAction:
+		go func() {
+			err := client.AddMessageFunc(&db.Message{
+				Message: message.Message,
+			})
+			if err != nil {
+				log.Printf("EROOR IN ADDING MESSAGE! Error: %s", err)
+			} else {
+				log.Printf("Successfully added message")
+			}
+
+		}()
 		client.room.broadcast <- &message
 	case LeaveRoomAction:
 		client.room.broadcast <- &message

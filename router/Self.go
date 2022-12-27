@@ -488,3 +488,44 @@ func (h Handlers) GetLessons(c *fiber.Ctx) error {
 	c.Status(200)
 	return c.JSON(res)
 }
+
+func (h Handlers) GetChats(c *fiber.Ctx) error {
+	id := c.Locals("userid").(uint)
+	if id == 0 {
+		return Drop400Error(c)
+	}
+
+	limit, err := strconv.Atoi(c.Query("limit", "none"))
+	if err != nil || limit > 100 {
+		limit = 25
+	}
+
+	chats, err := h.DB.GetAllUserChats(id, limit)
+	if err != nil {
+		return Drop500Error(c, err)
+	}
+	c.Status(200)
+	return c.JSON(chats)
+}
+
+func (h Handlers) GetMessages(c *fiber.Ctx) error {
+	id := c.Locals("userid").(uint)
+	if id == 0 {
+		return Drop400Error(c)
+	}
+
+	chatID := c.Params("id", "none")
+	if chatID == "none" {
+		return Drop400Error(c)
+	}
+	if !h.DB.IsChatUsers(chatID, id) {
+		return Drop401Error(c)
+	}
+	chat := db.ChatRoom{ID: chatID}
+	err := h.DB.GetChat(&chat)
+	if err != nil {
+		return Drop500Error(c, err)
+	}
+	c.Status(200)
+	return c.JSON(chat)
+}

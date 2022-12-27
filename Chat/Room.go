@@ -69,3 +69,6 @@ func (room *Room) BroadcastMessage(message []byte, client *Client) {
 func (room *Room) GetName() string {
 	return room.Name
 }
+func (room *Room) GetID() string {
+	return room.ID
+}

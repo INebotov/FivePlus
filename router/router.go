@@ -35,6 +35,8 @@ func (r Router) ApplyHandlers(h Handlers, m Middleware) error {
 	self.Get("/confirm", h.SelfConfirm)
 
 	self.Get("/lessons", h.GetLessons)
+	self.Get("/chats", h.GetChats)
+	self.Get("/chats/:id", h.GetMessages)
 
 	// self.Get("/search/teacher/subject", h.GetTeachersBySubject)
 

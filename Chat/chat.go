@@ -128,7 +128,19 @@ func (c *Chat) ServeWs(w http.ResponseWriter, r *http.Request) {
 
 	client := newClient(conn, user, room, l, c.clientParams)
 	client.ExitFunc = c.GetExitFunc(roomID[0])
+	client.AddMessageFunc = c.GetAddMessageFunc(user.ID, room.GetID())
 	room.register <- client
+}
+
+func (c *Chat) GetAddMessageFunc(clientID uint, chatid string) func(m *db.Message) error {
+	return func(m *db.Message) error {
+		m.SenderID = clientID
+		err := c.DB.AddMessage(m, chatid)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
 }
 
 func (c *Chat) GetExitFunc(roomid string) func() error {
