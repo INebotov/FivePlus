@@ -1,8 +1,7 @@
 package db
 
 import (
-	"BackendSimple/Sender"
-	"context"
+	"Backend/Errors"
 	"gorm.io/gorm"
 	"math/rand"
 	"time"
@@ -15,20 +14,16 @@ const (
 
 type TypesOfConfirmation int
 
-func (t TypesOfConfirmation) GetType() string {
-	return []string{"Email", "Phone Confirmation"}[t-1]
+func (t TypesOfConfirmation) String() string {
+	return []string{"email", "phone"}[t-1]
 }
-
-const (
-	RegistrationConfirmationAction = iota + 1
-	ProfileSecretsChangeConfirmationAction
-	DeteteChildAction
-)
-
-type ConfirmationsActions int
-
-func (t ConfirmationsActions) GetType() string {
-	return []string{"Registration", "User Profile Secrets Change", "Delete Child"}[t-1]
+func (t *TypesOfConfirmation) Parse(s string) {
+	switch s {
+	case "email":
+		*t = TypesOfConfirmation(1)
+	case "phone":
+		*t = TypesOfConfirmation(2)
+	}
 }
 
 type Confirmation struct {
@@ -36,11 +31,9 @@ type Confirmation struct {
 
 	UserID uint `gorm:"not null"`
 
-	Type       int    `gorm:"not null"`
-	TypeString string `gorm:"not null"`
+	Type int `gorm:"not null"`
 
-	Action       int    `gorm:"not null"`
-	ActionString string `gorm:"not null"`
+	ActionType string `gorm:"not null"`
 
 	Code int `gorm:"not null"`
 
@@ -49,60 +42,25 @@ type Confirmation struct {
 }
 
 func (c *Confirmation) GenerateConfirmation(expired time.Duration) {
-	if c.ActionString == "" {
-		c.ActionString = ConfirmationsActions(c.Action).GetType()
-	}
-	if c.TypeString == "" {
-		c.TypeString = TypesOfConfirmation(c.Type).GetType()
-	}
 	c.LiveUntill = time.Now().Add(expired).Unix()
-	c.GenerateCode()
-}
-
-func (c *Confirmation) GenerateCode() {
 	c.Code = 1000 + rand.Intn(8999)
 }
-func (db *DB) CreateConfirmation(c *Confirmation, u User, expired time.Duration) error {
-	c.GenerateConfirmation(expired)
-	if c.Type == EmailConfirmationType {
-		err := db.Sender.SendEmail(context.Background(), Sender.EmailMessage{
-			UserName:  u.Name,
-			Type:      c.Action,
-			Code:      c.Code,
-			Recipient: u.Email,
-		})
-		if err != nil {
-			return err
-		}
-	} else {
-		return WrongConfirmationTypeError
-	}
 
-	result := db.Engine.Create(c)
-	if result.RowsAffected == 0 {
-		return NoRowsAffectedError
-	}
-	return result.Error
+func (db *DB) CreateConfirmation(c *Confirmation, expired time.Duration) error {
+	c.GenerateConfirmation(expired)
+	return db.Engine.Create(c).Error
 }
-func (db *DB) ConfirmOperation(userid uint, code int, action int) error {
-	var conf Confirmation // TODO: In handlers from request -> to func Iject possible danger!
-	qery := db.Engine.Where("user_id = ? AND code = ? AND action = ?", userid, code, action)
-	res := qery.First(&conf)
-	if res.RowsAffected == 0 {
-		return NoRowsAffectedError
-	} else if res.Error != nil {
-		return res.Error
+func (db *DB) ConfirmOperation(userid uint, code int, action string) error {
+	var conf Confirmation
+	qery := db.Engine.Where("user_id = ? AND code = ? AND action_type = ?", userid, code, action)
+
+	if err := qery.First(&conf).Error; err != nil {
+		return err
 	}
 
 	if time.Now().Unix() > conf.LiveUntill {
-		return ConfirmationExpiredError
+		return Errors.ConfirmationExpiredError
 	}
 
-	res = qery.Delete(&Confirmation{})
-	if res.RowsAffected == 0 {
-		return NoRowsAffectedError
-	} else if res.Error != nil {
-		return res.Error
-	}
-	return nil
+	return qery.Delete(&Confirmation{}).Error
 }

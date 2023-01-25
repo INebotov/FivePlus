@@ -3161,35 +3161,32 @@ components:
           example: Error Not Authorized!
           description: Сообщение ошибки. Указывается примерная причина ошибки при этом сама ошибка в сообщение не идет по причине DataLeak
     Change:
-      type: object
-      properties:
-        changes:
-          type: array
-          items:
-            properties:
-              filed_name:
-                type: string
-                description: Тип изменяемого поля
-                enum:
-                  - name
-                  - email
-                  - phone
-                  - password
-                  - photo
-                  - username
-                  - subject
-                  - about
-                  - grade
-              new_value:
-                type: string
-                description: Новое значение изменяемого поля
-              operation:
-                type: string
-                description: Тип операции изменения
-                enum:
-                  - change
-                  - add
-                  - delete
+      type: array
+      items:
+        properties:
+          filed_name:
+            type: string
+            description: Тип изменяемого поля
+            enum:
+              - name
+              - email
+              - phone
+              - password
+              - photo
+              - username
+              - subject
+              - about
+              - grade
+          new_value:
+            type: string
+            description: Новое значение изменяемого поля
+          operation:
+            type: string
+            description: Тип операции изменения
+            enum:
+              - change
+              - add
+              - delete
 
     User:
       type: object
@@ -3220,9 +3217,6 @@ components:
           items:
             properties:
               name:
-                type: string
-                description: Имя устройства
-              agent:
                 type: string
                 description: Браузер с которого был произведен вход
               date:

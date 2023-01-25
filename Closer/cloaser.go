@@ -1,21 +1,22 @@
 package Closer
 
 import (
-	"Backend/Logger"
+	"fmt"
+	"go.uber.org/zap"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 )
 
-// TODO whait ws
+// TODO whait ws (for chat)
 type Closer struct {
 	CloseTimeout time.Duration
 	CloseFuncts  []Cloasble
 
-	Logger Logger.Logger
+	Logger *zap.Logger
 }
+
 type Cloasble struct {
 	Name string
 	F    func() error
@@ -35,28 +36,29 @@ func (c *Closer) Listen() {
 	<-s
 
 	defer os.Exit(0)
-	var wg sync.WaitGroup
-	for _, f := range c.CloseFuncts {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			c.Logger.Info("Exiting function: %s", f.Name)
-			err := f.F()
-			if err != nil {
-				c.Logger.Error("Error exiting in function: %s. Error: %s", f.Name, err)
-			}
-		}()
-	}
+	c.Logger.Info("Stopping application ....")
 	done := make(chan bool)
-	go func(done chan bool) {
-		wg.Wait()
-		done <- true
-	}(done)
-	tic := time.NewTimer(c.CloseTimeout)
+	go c.Stop(done)
+
+	timer := time.NewTimer(c.CloseTimeout)
+
 	select {
-	case <-tic.C:
-		c.Logger.Error("Timeout Closing Service!")
+	case <-timer.C:
+		fmt.Printf("Timeout stopping application\n")
 	case <-done:
-		c.Logger.Info("Successfully exited!")
+		fmt.Printf("Successfully stopped.\n")
 	}
+}
+
+func (c *Closer) Stop(done chan bool) {
+	for _, f := range c.CloseFuncts {
+		fmt.Printf("Exiting function. Function name: %s\n", f.Name)
+
+		err := f.F()
+
+		if err != nil {
+			fmt.Printf("Error in %s! Error %s\n", f.Name, err)
+		}
+	}
+	done <- true
 }

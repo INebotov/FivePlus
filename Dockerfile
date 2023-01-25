@@ -15,10 +15,10 @@ RUN go build -o main
 FROM alpine
 
 WORKDIR /app
-COPY ./config.yaml .
+COPY resources/config.yaml .
 
-COPY ./secrets ./secrets
-COPY ./templates ./templates
+COPY resources/secrets ./secrets
+COPY ../Worker/templates ./templates
 
 COPY --from=build /app/main main
 CMD ["./main", "./config.yaml"]

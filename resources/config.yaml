@@ -1,20 +1,7 @@
 App: fp backend v1.0
 Namespace: test
 
-Logger:
-  level: debug
-  encoding: json
-  outputPaths:
-    - stdout
-  errorOutputPaths:
-    - stderr
-  encoderConfig:
-    messageKey: message
-    levelKey: level
-    timeKey: time
-    levelEncoder: lowercase
-
-exit:
+Exit:
   Timeout: 30s
   WhaitWS: false
 
@@ -28,26 +15,55 @@ Kafka:
   ConnectTimeOut: 15s
 
 DataBase:
-  Name:
-  Type:
-  Host:
-  User:
-  Password:
-  TimeZone:
-  Port:
-  SslMode: 
+  Name: ./resources/db.sqlite
+  Type: 1
+#  Host:
+#  User:
+#  Password:
+#  TimeZone:
+#  Port:
+#  SslMode:
 
-logger:
+Auth:
+  Audience:
+    - test fp server >= v1.5
+  AccessExpired: 30m
+  RefreshExpired: 30d
+  RefreshLength: 128
+  Keys:
+    Private: ./resources/secrets/private.pem
+    Public: ./resources/secrets/public.pem
+  # not used yet
+  ChangeExpires: 360d
+  ChatExpires: 360d
+
+Handlers:
+  EmailConfirmationExpired: 10m
+  PhoneConfExpired: 5m
+  Port: 8080
+  Host: 0.0.0.0
+
+# not used yet
+Chat:
+  WriteWait: 5s
+  PongWait: 30s
+  MaxMessageSize: 1024
+
+Logger:
   level: debug
   encoding: json
   outputPaths:
     - stdout
-    - ./logs/back.log
+    - ./.logs/log.log
   errorOutputPaths:
     - stdout
     - stderr
-    - ./logs/back.err
+    - ./.logs/error.log
   encoderConfig:
     messageKey: message
     levelKey: level
-    levelEncoder: uppercase
+    timeKey: time
+    levelEncoder: lowercase
+    lineEnding: ","
+    skipLineEnding: false
+    consoleSeparator: "---- New Run ----"

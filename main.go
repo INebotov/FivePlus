@@ -1,17 +1,22 @@
 package main
 
 import (
-	"BackendSimple/Chat"
-	"BackendSimple/Sender"
-	"BackendSimple/auth"
-	"BackendSimple/db"
-	"BackendSimple/router"
-	"flag"
-	"github.com/gofiber/adaptor/v2"
+	"Backend/Closer"
+	"Backend/Configurator"
+	"Backend/Kafka"
+	"Backend/Logger"
+	"Backend/Metrics"
+	"Backend/auth"
+	"Backend/db"
+	"Backend/web"
+	"fmt"
 	"github.com/golang-jwt/jwt/v4"
-	"log"
-	"net/http"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"os"
+	"reflect"
+	"runtime"
+	"time"
 )
 
 func main() {
@@ -22,75 +27,217 @@ func main() {
 		path = "./config.yaml"
 	}
 
-	config := Configure(path)
-
-	sender := Sender.EmailSender{
-		Email:                           config.Sender.Email.Email,
-		Password:                        config.Sender.Email.Password,
-		SMTPServer:                      config.Sender.Email.SMTPServer,
-		Port:                            config.Sender.Email.Port,
-		SSL:                             config.Sender.Email.SSL,
-		VerificationChangeTemplate:      config.Sender.Email.VerificationChangeTemplate,
-		VerificationEmailTemplate:       config.Sender.Email.VerificationEmailTemplate,
-		VerificationDeleteChildTemplate: config.Sender.Email.DeleteChildTemplate,
+	// Internal: config logger closer data authorize emailLM metrics old-router
+	I := GetInternal(path)
+	if reflect.DeepEqual(Internal{}, I) {
+		runtime.Goexit()
 	}
 
-	err := sender.Config()
+	I.Router.ApplyHandlers()
+	I.Router.Start()
+}
+
+type Internal struct {
+	Config *Configurator.Config[time.Duration]
+	Logger *zap.Logger
+
+	Metrics *Metrics.Metrics
+
+	Closer   *Closer.Closer
+	DataBase *db.DB
+	Auth     *auth.Auth
+
+	Kafka struct {
+		Email *Kafka.Kafka
+		SMS   *Kafka.Kafka
+		Media *Kafka.Kafka
+	}
+
+	Router *web.Router
+}
+
+func GetInternal(path string) Internal {
+	null := Internal{}
+	fmt.Println("Configuring ....")
+	var res Internal
+
+	config, err := Configurator.Configure(path)
 	if err != nil {
-		panic(err)
+		fmt.Printf("Error Configuring: %s\n", err)
+		return null
 	}
+	fmt.Println("Done configuring.\nGetting Logger...")
+	res.Config = &config
 
-	database, err := db.GetDB(config.DataBase, sender)
+	logger, err := Logger.GetLogger(config.Logger)
 	if err != nil {
-		panic(err)
+		fmt.Printf("Error getting logger: %s", err)
+		return null
+	}
+	res.Logger = logger
+
+	closer := Closer.Closer{
+		CloseTimeout: config.Exit.Timeout,
+		Logger:       logger,
+	}
+	logger.Debug("Logger is started successfully!")
+	closer.Add("Logger Sync function", logger.Sync)
+	res.Closer = &closer
+
+	if config.Kafka.Connect {
+		logger.Info("Connecting to email Kafka...")
+		emailLM, err := Kafka.GetKafka(Kafka.Config{
+			Partition:      config.Kafka.Partition,
+			Host:           config.Kafka.Host,
+			Port:           config.Kafka.Port,
+			UDP:            config.Kafka.UDP,
+			WriteTimeOut:   config.Kafka.WriteTimeOut,
+			ConnectTimeOut: config.Kafka.ConnectTimeOut,
+
+			Log: logger,
+		}, "email")
+		if err != nil {
+			logger.Fatal("Error connecting to email kafka!", zap.Field{
+				Key:    "Error",
+				Type:   zapcore.ErrorType,
+				String: err.Error(),
+			})
+		}
+		closer.Add("Email Kafka Cloase Function", emailLM.CloserFunc)
+		logger.Info("Successfully connected to email kafka!")
+		res.Kafka.Email = &emailLM
 	}
 
-	autntification := auth.Auth{
+	logger.Info("Connecting to DataBase....")
+	data := db.DB{
+		Params: config.DataBase,
+		Log:    logger,
+	}
+	err = data.Connect()
+	if err != nil {
+		logger.Fatal("Error connecting to database!", zap.Field{
+			Key:    "Error",
+			Type:   zapcore.ErrorType,
+			String: err.Error(),
+		})
+	}
+	closer.Add("Database Exit Func", data.CloserFunc)
+	logger.Info("Successfully connected to database!")
+	res.DataBase = &data
+
+	logger.Info("Initializing auth Service....")
+	authorize := auth.Auth{
 		SingingMethod:  jwt.SigningMethodHS512,
 		Issuer:         config.App,
 		Audience:       config.Auth.Audience,
 		AccessExpired:  config.Auth.AccessExpired,
 		RefreshExpired: config.Auth.RefreshExpired,
-		DB:             database,
 		ChangeExpires:  config.Auth.ChangeExpires,
 		ChatExpires:    config.Auth.ChatExpires,
 		RefreshLength:  config.Auth.RefreshLength,
-	}
-	err = autntification.GetKeys(config.Auth.Keys.Private, config.Auth.Keys.Public)
-	if err != nil {
-		panic(err)
-	}
-	rout, err := router.GetRouter()
-	if err != nil {
-		panic(err)
-	}
 
-	chat := Chat.NewChat(database, autntification, Chat.ClientParams{
-		WriteWait:      config.Chat.WriteWait,
-		PongWait:       config.Chat.PongWait,
-		MaxMessageSize: config.Chat.MaxMessageSize,
-	})
+		Log: logger,
+	}
+	err = authorize.GetKeys(config.Auth.Keys.Private, config.Auth.Keys.Public)
+	if err != nil {
+		logger.Fatal("Error getting keys for auth Service!", zap.Field{
+			Key:    "Error",
+			Type:   zapcore.ErrorType,
+			String: err.Error(),
+		})
+	}
+	res.Auth = &authorize
 
-	handlers := router.Handlers{
-		Auth:             autntification,
-		DB:               database,
+	metric := Metrics.Metrics{Namespace: config.Namespace}
+	metric.Init()
+	err = initMetric(&metric)
+	if err != nil {
+		logger.Fatal("Error initializing metrics!", zap.Field{
+			Key:    "Error",
+			Type:   zapcore.ErrorType,
+			String: err.Error(),
+		})
+	}
+	res.Metrics = &metric
+
+	router := web.Router{
+		DataBase:         &data,
+		Auth:             &authorize,
+		Metrics:          &metric,
 		EmailConfExpired: config.Handlers.EmailConfirmationExpired,
-		Chat:             &chat,
+		PhoneConfExpired: config.Handlers.PhoneConfExpired,
+
+		Host: config.Handlers.Host,
+		Port: config.Handlers.Port,
+
+		Log: logger,
 	}
-	middleware := router.Middleware{
-		Auth: autntification,
-		DB:   database,
-	}
-	err = rout.ApplyHandlers(handlers, middleware)
+	router.Kafka.Email = res.Kafka.Email
+	err = router.Init()
 	if err != nil {
-		panic(err)
+		logger.Fatal("Error initializing old-router!", zap.Field{
+			Key:    "Error",
+			Type:   zapcore.ErrorType,
+			String: err.Error(),
+		})
+	}
+	res.Router = &router
+	closer.Add("Router stop func", router.CloseFunc)
+
+	go closer.Listen()
+
+	return res
+}
+
+func initMetric(m *Metrics.Metrics) error {
+	err := m.AddCounter(Metrics.Counter{
+		Name:   "requests",
+		Help:   "Общее количество запроссов к службе.",
+		Labels: nil,
+		Action: "any_request",
+	})
+	if err != nil {
+		return err
 	}
 
-	flag.Parse()
+	err = m.AddCounter(Metrics.Counter{
+		Name:   "ok_requests",
+		Help:   "Количество успрешных запросов.",
+		Labels: nil,
+		Action: "success_request",
+	})
+	if err != nil {
+		return err
+	}
 
-	http.HandleFunc("/chat", chat.ServeWs)
-	http.Handle("/", adaptor.FiberApp(rout.App))
+	err = m.AddCounter(Metrics.Counter{
+		Name:   "auth_bad_requests",
+		Help:   "Количество неуспешных запросов по причине отсудствия прав доступа.",
+		Labels: nil,
+		Action: "auth_failure",
+	})
+	if err != nil {
+		return err
+	}
 
-	log.Println("Listening on :9090!")
-	log.Fatal(http.ListenAndServe(":9090", nil))
+	err = m.AddCounter(Metrics.Counter{
+		Name:   "bad_request",
+		Help:   "Количество неуспешных запросов с неправильным телом запроса.",
+		Labels: nil,
+		Action: "bad_request_failure",
+	})
+	if err != nil {
+		return err
+	}
+
+	err = m.AddCounter(Metrics.Counter{
+		Name:   "errors",
+		Help:   "Количество внутренних некритичных ошибок.",
+		Labels: nil,
+		Action: "error",
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }

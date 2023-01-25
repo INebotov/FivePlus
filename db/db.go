@@ -1,9 +1,9 @@
 package db
 
 import (
-	"BackendSimple/Sender"
 	"fmt"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -21,14 +21,14 @@ func (typ TypeOfDB) GetType() string {
 }
 
 type DBParams struct {
-	Name     string
-	Type     int
-	Host     string
-	User     string
-	Password string
-	TimeZone string
-	Port     int
-	SslMode  bool
+	Name     string `yaml:"Name"`
+	Type     int    `yaml:"Type"`
+	Host     string `yaml:"Host"`
+	User     string `yaml:"User"`
+	Password string `yaml:"Password"`
+	TimeZone string `yaml:"TimeZone"`
+	Port     int    `yaml:"Port"`
+	SslMode  bool   `yaml:"SslMode"`
 }
 
 type DB struct {
@@ -36,33 +36,39 @@ type DB struct {
 
 	Params DBParams
 	Engine *gorm.DB
-	Sender Sender.EmailSender
+
+	Log *zap.Logger
+
+	CloserFunc func() error
 }
 
-func GetDB(Params DBParams, sender Sender.EmailSender) (DB, error) {
+func (db *DB) Connect() error {
 	var err error
-	db := DB{
-		Params: Params,
-		ID:     (uuid.New()).String(),
-		Sender: sender,
-	}
-	if Params.Type == TypePostgres {
+	db.ID = (uuid.New()).String()
+
+	if db.Params.Type == TypePostgres {
 		err = db.InitPostgres()
-	} else if Params.Type == TypeSQLLite {
-		err = db.InitLite(Params.Name)
+		if err != nil {
+			return err
+		}
+	} else if db.Params.Type == TypeSQLLite {
+		err = db.InitLite(db.Params.Name)
+		if err != nil {
+			return err
+		}
 	} else {
-		return DB{}, fmt.Errorf("wrong type of database")
+		return fmt.Errorf("wrong type of database")
 	}
-	if err = db.Migration(); err != nil {
-		return DB{}, err
+	DATA, err := db.Engine.DB()
+	if err != nil {
+		return err
 	}
-	return db, err
+	db.CloserFunc = DATA.Close
+	return db.Migration()
 }
 
 func (db *DB) Migration() error {
-	return db.Engine.AutoMigrate(&User{}, &RefreshToken{}, &Confirmation{}, &UserToUser{}, &BillingAccount{},
-		&Subject{}, &SubjectToTeacher{}, &Lesson{}, &LessonRequest{}, &ChatRoom{}, &Teacher{}, &Transaction{})
-
+	return db.Engine.AutoMigrate(&Session{})
 }
 
 func (db *DB) InitPostgres() error {
