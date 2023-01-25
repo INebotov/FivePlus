@@ -1,0 +1,53 @@
+App: fp backend v1.0
+Namespace: test
+
+Logger:
+  level: debug
+  encoding: json
+  outputPaths:
+    - stdout
+  errorOutputPaths:
+    - stderr
+  encoderConfig:
+    messageKey: message
+    levelKey: level
+    timeKey: time
+    levelEncoder: lowercase
+
+exit:
+  Timeout: 30s
+  WhaitWS: false
+
+Kafka:
+  Connect: false
+  Partition: 0
+  Host: kafka
+  Port: 9092
+  UDP: false
+  WriteTimeOut: 2s
+  ConnectTimeOut: 15s
+
+DataBase:
+  Name:
+  Type:
+  Host:
+  User:
+  Password:
+  TimeZone:
+  Port:
+  SslMode: 
+
+logger:
+  level: debug
+  encoding: json
+  outputPaths:
+    - stdout
+    - ./logs/back.log
+  errorOutputPaths:
+    - stdout
+    - stderr
+    - ./logs/back.err
+  encoderConfig:
+    messageKey: message
+    levelKey: level
+    levelEncoder: uppercase

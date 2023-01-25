@@ -1,0 +1,4179 @@
+openapi: 3.0.3
+info:
+  title: FivePlus Monolit API
+  description: "API Сервиса Пять с Плюсом."
+  version: v1.1
+externalDocs:
+  url: https://github.com/INebotov/FivePlus
+servers:
+  - url: http://localhost:8080
+    description: Хост разработки
+  - url: https://fiveplus.justnets.ru
+    description: Продакшн сервер
+
+tags:
+  - name: Назначение - Служебный
+    description: Пути не имеют прямого отношения к пользователям и их возможностям но представляют интерес для разработчиков и тестировщиков.
+  - name: Назначение - Проверки
+    description: Функции проверки и валидации данных выполнение которых необходимо на стороне сервера.
+  - name: Назначение - Авторизация
+    description: Пути авторизации пользователя. (Вход Регистация Выход)
+  - name: Назначение - Работа с обьектом себя
+    description: Фкнкции позволяющие работать с собственным пользователем.
+  - name: Назначение - Получение сторонних обьектов
+    description: Фкнкции позволяющие получать сторонние обьекты.
+  - name: Назначение - Процесс обучения
+    description: Фкнкции реализующие весь процесс обучения о общения с преподователем.
+  - name: Назначение - Работа со сторонними обьектами и людьми
+    description: Фкнкции реализующие работу со сторонними обьектами и людьми
+  - name: Назначение - Админка
+    description: Тут происходит общая настройка системы админами и другая темная магия
+  - name: Назначение - Поддержка
+    description: Тут происходит общая настройка системы админами и другая темная магия
+
+  - name: Доступ - Без авторизации
+    description: К этим путям может получить доступ любой пользователь даже не авторизованный.
+  - name: Доступ - Любой авторизованный
+    description: К этим путям может получить доступ пользователь любого типа доступа но обязательно он должен быть авторизован.
+  - name: Доступ - Учитель Ребенок Родитель
+    description: К этим путям могут получить доступ только пользователи типа Учитель, Ребенок или Родитель.
+  - name: Доступ - Ребенок Родитель
+    description: К этим путям могут получить доступ только пользователи типа Ребенок или Родитель.
+  - name: Доступ - Родитель
+    description: К этим путям могут получить доступ только пользователи типа Родитель.
+  - name: Доступ - Учитель
+    description: К этим путям могут получить доступ только пользователи типа Учитель.
+  - name: Доступ - Админ
+    description: К этим путям могут получить доступ только пользователи типа Админ.
+  - name: Доступ - Поддержка
+    description: К этим путям могут получить доступ только пользователи типа Поддержка.
+
+  - name: Защита от дурака - Action token
+    description: Доступ только при имеющемся в наличии Action token'а позволяющего совершать критические операции. Время его жизни прмерно 15 минут
+      и получить его можно только с помощью кода подтверждения отправляемого на телефон или эл. почту.
+
+paths:
+  # Служебные
+  /:
+    get:
+      summary: Получение описания API
+      description: Получение служебной информаци об API и небольшой документации
+      tags:
+        - Назначение - Служебный
+        - Доступ - Без авторизации
+      responses:
+        '200':
+          description: Успешный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Info'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+  /health:
+    get:
+      summary: Проверка здоровья API
+      description: Отправляет открытые данные Prometheus - количество запросов, количество успешных запросов, количество неуспешных 
+        зпросов по вине пользователя, сервера, количество ошибок, размер занимаемой памяти логами.
+      tags:
+        - Доступ - Без авторизации
+        - Назначение - Служебный
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+
+  # Проверки
+  /is:
+    get:
+      summary: Проверка имени пользователя, телефона и email адреса
+      description: Проверяет занято ли имя пользователя, телефон, email. Есть возможность проверки "пакетом" т.е при передаче
+        сразу трех парпметров все три будут проверены
+      tags:
+        - Назначение - Проверки
+        - Доступ - Без авторизации
+      parameters:
+        - name: email
+          in: query
+          description: Email который надо проверить
+          required: false
+          schema:
+            type: string
+        - name: phone
+          in: query
+          description: Телефон который надо проверить
+          required: false
+          schema:
+            type: string
+        - name: username
+          in: query
+          description: Имя пользователя которре надо проверить
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Is'
+        '400':
+          description: Неправильный формат данных
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+  /hi:
+    get:
+      summary: Проверка правильности авторизационных данных(Токенов)
+      description: Возрвращает true если пользователь вошел в систему и ID этого пользователя. Также если access истек автоматически его освежает,
+        однако это происходит при любом запросе к защищенному ресурсу.
+      tags:
+        - Назначение - Проверки
+        - Доступ - Любой авторизованный
+      security:
+        - accessCookie: [ ]
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hi'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+
+  # Авторизация TODO: OAUTH: Google Vk Yandex ( Отдельный вход для сотрудников Crm )
+  /auth/reg:
+    post:
+      summary: Регистрация нового пользователя
+      description: Регистрирует нового пользователя с уровнем доступа General, неподтвержденным телефоном и email, 
+        без детей но с собственным Billing Account. General - по правам синоним Родителя
+      tags:
+        - Назначение - Авторизация
+        - Доступ - Без авторизации
+      requestBody:
+        required: true
+        description: Данные для регистрации пользователя
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Reg'
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Неверные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+  /auth/login:
+    post:
+      summary: Вход пользователя
+      description: Вход пользователя и получение токенов. 
+        ! Токены отправляются в качестве HTTPONLY Cookie т.е из самого фронтедна к ним доступа нет !
+      tags:
+        - Назначение - Авторизация
+        - Доступ - Без авторизации
+      requestBody:
+        required: true
+        description: Данные для входа пользователя
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+      responses:
+        '200':
+          description: Успешная авторизация. Токены успешно созданы и направлены.
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Неверный формат данных
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Неверный логин или пароль
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /auth/logout:
+    get:
+      summary: Выход пользователя
+      description: Удаляет Refresh токен из БД и удаляет авторизационные Cookie. 
+        Однако в силу специфики JWT если access был где то сохранен то пока он не истечет (примерно 1 час) доступ по нему будет можно получить.
+      tags:
+        - Назначение - Авторизация
+        - Доступ - Любой авторизованный
+      security:
+        - accessCookie: []
+      responses:
+        '200':
+          description: Успешное удаление всех ключей доступа и выход
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardResponse'
+        '401':
+          description: Пользователь уже не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+
+  # Работа с обьектом себя
+  /self:
+    get:
+      summary: Получение обьекта пользователя
+      description: Получение всего пользьзователя за исключением специфичных для уровней полей, полного биллинга, статистики и других тяжеловесных вещей
+      tags:
+        - Назначение - Работа с обьектом себя
+        - Доступ - Любой авторизованный
+      security:
+        - accessCookie: []
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    put:
+      summary: Изменение пользователя
+      description: Изменяет пользователя (если изменяестся секрет то нужен код подтверждения)
+      tags:
+        - Назначение - Работа с обьектом себя
+        - Доступ - Любой авторизованный
+        - Защита от дурака - Action token
+      security:
+        - accessCookie: [ ]
+        - actionToken: [ ]
+      requestBody:
+        required: true
+        description: Изменения пользователя
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Change'
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Данные не прошли валидацию(Данные неверны)
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован или Action token устарел
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /self/confirm/{what}:
+    get:
+      summary: Отправка кода подтверждения для какой либо операции
+      description: Отправляет код подтрерждения на Телефон/Email для подтверждения какой либо операции. 
+        Этот код нужен для дальнейшего получения Access tocken'а. При этом этот токен может быть специфичен для конкретной операции
+      tags:
+        - Назначение - Работа с обьектом себя
+        - Доступ - Любой авторизованный
+        - Защита от дурака - Action token
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: what
+          in: path
+          description: Тип операции
+          required: true
+          schema:
+            type: string
+            enum:
+              - email_confirm
+              - phone_confirm
+              - profile_change
+              - child_delete
+              - universal
+        - name: thru
+          in: query
+          description: Куда направить код подтверждения. 
+            Но надо учитывать что этот параметр игнорируется для типов email_confirm phone_confirm.
+          required: true
+          schema:
+            type: string
+            enum:
+              - email
+              - phone
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Неправильный параметр what или параметр thru
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    post:
+      summary: Получение токена "действия"
+      description: Получение токена "действия", позволяющего в течении какого либо времени производить операции указанные в нем
+      tags:
+        - Доступ - Любой авторизованный
+        - Назначение - Работа с обьектом себя
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: what
+          in: path
+          description: Что подтвердить
+          required: true
+          schema:
+            type: string
+            enum:
+              - email
+              - phone
+      requestBody:
+        required: true
+        description: Изменения пользователя
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: integer
+                  description: Код подтверждения
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '401':
+          description: Пользователь не авторизован или неверный код подтверждения
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /lessons:
+    get:
+      summary: Получение истроии уроков
+      description: Получает истроию уроков. Если пользователь - ребенок то возвращает все его уроки
+        если родитель то всю историю его детей с указанием ребенка
+        если учитель то все уроки с указанием ребенка
+      tags:
+        - Назначение - Работа с обьектом себя
+        - Доступ - Учитель Ребенок Родитель
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: limit
+          in: query
+          description: Лимит количества возвращенных уроков. По умолчанию 25 максимально 100.
+          required: false
+          schema:
+            type: integer
+        - name: from
+          in: query
+          description: Начиниая с элемета( Нужно для динамической подгрузки страницы )
+          required: false
+          schema:
+            type: integer
+        - name: filter
+          in: query
+          description: Правила фильтрации
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LessonMinimalistic'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /rooms:
+    get:
+      summary: Получение истории чатов
+      description: Получает все чаты пользователя.
+      tags:
+        - Назначение - Работа с обьектом себя
+        - Доступ - Учитель Ребенок Родитель
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: limit
+          in: query
+          description: Лимит количества возвращенных чатов. По умолчанию 25 максимально 100.
+          required: false
+          schema:
+            type: integer
+        - name: from
+          in: query
+          description: Начиниая с элемета( Нужно для динамической подгрузки страницы )
+          required: false
+          schema:
+            type: integer
+        - name: filter
+          in: query
+          description: Правила фильтрации
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RoomMinimalistic'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /invlink:
+    post:
+      summary: Генерация своей постоянной пригласительной ссылки
+      description: Генерация ссылки-приглашения на становление ребенкм пользователя
+      tags:
+        - Доступ - Родитель
+        - Защита от дурака - Action token
+      security:
+        - accessCookie: [ ]
+        - actionToken: [ ]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                life_time:
+                  type: integer
+                  description: Дата до которой жива ссылка
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvLink'
+        '401':
+          description: Пользователь не авторизован или Action token устарел
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    delete:
+      summary: Удаление ссылки-приглашения
+      description: Удаление ссылки-приглашения
+      tags:
+        - Доступ - Родитель
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: id
+          in: query
+          description: ID ссылки
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    get:
+      summary: Получение всех своих ссылок-приглашений
+      description: Получение всех своих ссылок-приглашений
+      tags:
+        - Доступ - Родитель
+      security:
+        - accessCookie: [ ]
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InvLink'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /accept:
+    post:
+      summary: Принятие приглашения
+      description: Принятие приглашения по ссылке-приглашению или приглашения
+      tags:
+        - Доступ - Ребенок Родитель
+        - Защита от дурака - Action token
+      security:
+        - accessCookie: [ ]
+        - actionToken: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  description: ID приглашения
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invitation'
+        '400':
+          description: Неправильный ID приглашения или пользователь имеет ненулевой баланс
+            или пользователь имеет детей.
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован или Action token устарел
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    get:
+      summary: Получение всех приглашений
+      description: Получение всех приглашений
+      tags:
+        - Доступ - Ребенок Родитель
+      security:
+        - accessCookie: [ ]
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invitation'
+        '400':
+          description: Неправильный ID приглашения или пользователь имеет детей.
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /teacher/tobe:
+    post:
+      summary: Отправить заявку на становление учителем.
+      description: Отправляет заявку на присвоение статуса учителя. Заявка подтверждается администрацией. Отредактировать заявку после отправления нельзя!
+      tags:
+        - Доступ - Родитель
+        - Защита от дурака - Action token
+      security:
+        - accessCookie: [ ]
+        - actionToken: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeacherAppliance'
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplianceStatus'
+        '400':
+          description: Уже оставлена заявка.
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован или Action token устарел
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    delete:
+      summary: Удаление заявки
+      description: Удаляет заявку на присвоение статуса учителя со всеми ее медиа данными.
+      tags:
+        - Назначение - Работа с обьектом себя
+        - Доступ - Родитель
+      security:
+        - accessCookie: [ ]
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    get:
+      summary: Получение своей заявки
+      description: Получение своей заявки на присвоение статуса учителя
+      tags:
+        - Доступ - Родитель
+        - Назначение - Работа с обьектом себя
+      security:
+        - accessCookie: [ ]
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  appliance:
+                    $ref: '#/components/schemas/TeacherAppliance'
+                  appliance_status:
+                    $ref: '#/components/schemas/ApplianceStatus'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /billing:
+    get:
+      summary: Получение биллиг аккаунта
+      description: Получение биллиг аккаунта
+      tags:
+        - Доступ - Любой авторизованный
+        - Назначение - Работа с обьектом себя
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: id
+          in: query
+          description: ID ребенка
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/BillingAccount'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+
+  # Получение сторонних обьектов
+  /lessons/{id}:
+    get:
+      summary: Получение конкретного урока
+      description: Получение полного обьекта урока по его ID
+      tags:
+        - Назначение - Получение сторонних обьектов
+        - Доступ - Любой авторизованный
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: ID урока
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Lesson'
+        '400':
+          description: Неправильный ID
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /rooms/{id}:
+    get:
+      summary: Получение конкретного чата
+      description: Получение полного обьекта чата по его ID
+      tags:
+        - Назначение - Получение сторонних обьектов
+        - Доступ - Любой авторизованный
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: ID урока
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Room'
+        '400':
+          description: Неправильный ID
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /messages/{chat_id}:
+    get:
+      summary: Получение конкретного чата
+      description: Получение полного обьекта чата по его ID
+      tags:
+        - Назначение - Получение сторонних обьектов
+        - Доступ - Любой авторизованный
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: chat_id
+          in: path
+          description: ID урока
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          description: Лимит количества возвращенных уроков. По умолчанию 50 максимально 200.
+          required: false
+          schema:
+            type: integer
+        - name: from
+          in: query
+          description: Начиниая с элемета( Нужно для динамической подгрузки страницы )
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+        '400':
+          description: Неправильный ID
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /subjects:
+    get:
+      summary: Получение всех предметов
+      description: Получение все предметов
+      tags:
+        - Назначение - Получение сторонних обьектов
+        - Доступ - Без авторизации
+      parameters:
+        - name: limit
+          in: query
+          description: Лимит количества возвращенных уроков. По умолчанию 25 максимально 100.
+          required: false
+          schema:
+            type: integer
+        - name: from
+          in: query
+          description: Начиниая с элемета( Нужно для динамической подгрузки страницы )
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Subject'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /grades:
+    get:
+      summary: Получение всех классов
+      description: Получение всех классов
+      tags:
+        - Назначение - Получение сторонних обьектов
+        - Доступ - Без авторизации
+      parameters:
+        - name: limit
+          in: query
+          description: Лимит количества возвращенных уроков. По умолчанию 25 максимально 100.
+          required: false
+          schema:
+            type: integer
+        - name: from
+          in: query
+          description: Начиниая с элемета( Нужно для динамической подгрузки страницы )
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Grade'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /teachers:
+    get:
+      summary: Получение учителей с указанием правил фильтрации
+      description: Получение учиьелей с указанием правил фильтрации
+      tags:
+        - Назначение - Получение сторонних обьектов
+        - Доступ - Без авторизации
+      parameters:
+        - name: limit
+          in: query
+          description: Лимит количества возвращенных уроков. По умолчанию 25 максимально 100.
+          required: false
+          schema:
+            type: integer
+        - name: from
+          in: query
+          description: Начиниая с элемета( Нужно для динамической подгрузки страницы )
+          required: false
+          schema:
+            type: integer
+        - name: filter
+          in: query
+          description: Правила фильтрации
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeacherMinimalistic'
+        '400':
+          description: Ошибка в правилах фильтрации
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /papers:
+    get:
+      summary: Получение статей
+      description: Получение статей
+      tags:
+        - Назначение - Получение сторонних обьектов
+        - Доступ - Без авторизации
+      parameters:
+        - name: limit
+          in: query
+          description: Лимит количества возвращенных уроков. По умолчанию 25 максимально 100.
+          required: false
+          schema:
+            type: integer
+        - name: from
+          in: query
+          description: Начиниая с элемета( Нужно для динамической подгрузки страницы )
+          required: false
+          schema:
+            type: integer
+        - name: filter
+          in: query
+          description: Правила фильтрации. По умолнаию - сначала новые
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/PaperMinimalistic'
+        '400':
+          description: Ошибка в правилах фильтрации
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /supporters:
+    get:
+      summary: Получение менеджеров по поддержке
+      description: Получение менеджеров по поддержке
+      tags:
+        - Назначение - Получение сторонних обьектов
+        - Доступ - Без авторизации
+      parameters:
+        - name: limit
+          in: query
+          description: Лимит количества возвращенных уроков. По умолчанию 25 максимально 100.
+          required: false
+          schema:
+            type: integer
+        - name: from
+          in: query
+          description: Начиниая с элемета( Нужно для динамической подгрузки страницы )
+          required: false
+          schema:
+            type: integer
+        - name: filter
+          in: query
+          description: Правила фильтрации. По умолнаию - сначала новые
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/SupporterMinimalistic'
+        '400':
+          description: Ошибка в правилах фильтрации
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /blob/{id}:
+    get:
+      summary: Получение файла
+      description: Получение файла
+      tags:
+        - Доступ - Без авторизации
+        - Назначение - Получение сторонних обьектов
+      parameters:
+        - name: id
+          in: path
+          description: ID файла
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/File'
+        '400':
+          description: Неправильный ID файла.
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Нету доступа к файлу
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /userlogo/{by}/{value}:
+    get:
+      summary: Получение фотографии пользователя
+      description: Получение фотографии пользователя
+      tags:
+        - Доступ - Без авторизации
+        - Назначение - Получение сторонних обьектов
+      parameters:
+        - name: by
+          in: path
+          description: С помощью чего получить
+          required: true
+          schema:
+            type: string
+            enum:
+              - id
+              - username
+        - name: value
+          in: path
+          description: Идентификатор пользователя
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/File'
+        '400':
+          description: Неправильный ID файла.
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Нету доступа к файлу
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /supporter/full/{id}:
+    get:
+      summary: Получение менеджеров по поддержке
+      description: Получение менеджеров по поддержке
+      tags:
+        - Доступ - Без авторизации
+        - Назначение - Получение сторонних обьектов
+      parameters:
+        - name: id
+          in: path
+          description: ID менеджера по поддержке
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Supporter'
+        '400':
+          description: Ошибка в правилах фильтрации
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+
+  # Процесс обучения
+  /lesson:
+    post:
+      summary: Запрос урока
+      description: Подача заявки на проведение урока
+      tags:
+        - Назначение - Процесс обучения
+        - Доступ - Ребенок Родитель
+      security:
+        - accessCookie: [ ]
+      requestBody:
+        required: true
+        description: Данные для запроса урока
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestALesson'
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Lesson'
+        '400':
+          description: Неправильный ID предмета или время больше имеющегося или на пользователе уже висит заявка.
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    get:
+      summary: Проверка заявки урока
+      description: Полуение обьекта урока или заявки урока
+      tags:
+        - Доступ - Ребенок Родитель
+        - Назначение - Процесс обучения
+      security:
+        - accessCookie: [ ]
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/Lesson'
+        '400':
+          description: Неправильный ID предмета или урок завершен.
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    delete:
+      summary: Отмена заявки на проведение урока
+      description: Отменяет заявку на проведение урока.
+      tags:
+        - Доступ - Ребенок Родитель
+        - Назначение - Процесс обучения
+      security:
+        - accessCookie: [ ]
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Неправильный ID предмета или урок уже наяался или закончился.
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    put:
+      summary: Изменение заявки на проведение урока
+      description: Изменение заявки на проведение урока
+      tags:
+        - Доступ - Ребенок Родитель
+        - Назначение - Процесс обучения
+      security:
+        - accessCookie: [ ]
+      requestBody:
+        required: true
+        description: Данные для запроса урока
+        content:
+          application/json:
+            schema:
+              properties:
+                question:
+                  type: string
+                  description: Вопрос по которому в основном пройдет урок
+                subject_id:
+                  type: integer
+                  description: ID предмета по которому пройдет урок.
+                time:
+                  type: integer
+                  description: Примерное время которое займет занятие по мнению ученика. !Не точная величина урок может длится как > так и <
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/Lesson'
+        '400':
+          description: Неправильный ID предмета\урока или время больше имеющегося или урок уже начался\закончился.
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /teacher/lesson:
+    get:
+      summary: Получение рекомендованных уроков
+      description: Полуение обьекта урока или заявки урока
+      tags:
+        - Доступ - Учитель
+        - Назначение - Процесс обучения
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: grade
+          in: query
+          description: ID желаемого класса
+          required: false
+          schema:
+            type: integer
+        - name: subject
+          in: query
+          description: ID желаемого предмета
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Lesson'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /teacher/lesson/{action}:
+    post:
+      summary: Завершение, начало или пауза урока
+      description: Начало урока из заявок или принудителное завершение урока в обход чата(в случае технических неполадок). Заморозить урок
+      tags:
+        - Доступ - Учитель
+        - Назначение - Процесс обучения
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: action
+          in: path
+          description: Действие над уроком(Наать или Закончить или Заморозить)
+          required: true
+          schema:
+            type: string
+            enum:
+              - start
+              - stop
+              - pause
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  description: ID урока
+                message:
+                  type: string
+                  description: Описания действия
+                  example: Перерыв 15 минут до 15:00. Попьем чай н назад учиться ;)
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lesson'
+        '400':
+          description: Неправильный ID урока или учитель не проводит данный урок.
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+
+  # Работа со сторонними обьектами и людьми
+  /mark/{what}:
+    post:
+      summary: Прокомментировать что либо
+      description: Оставление комментария и оценки по шкале от 0 до 10 под уроком
+      tags:
+        - Назначение - Работа со сторонними обьектами и людьми
+        - Доступ - Ребенок Родитель
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: what
+          in: path
+          description: Что прокомментировать
+          required: true
+          schema:
+            type: string
+            enum:
+              - lesson
+              - paper
+              - supporter
+      requestBody:
+        required: true
+        description: Комментраий
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkSend'
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Mark'
+        '400':
+          description: Неправильный ID урока или уже оставлен комментарий.
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    put:
+      summary: Изменить уже оставленный комментарий
+      description: Изменение уже оставленного комментария
+      tags:
+        - Назначение - Работа со сторонними обьектами и людьми
+        - Доступ - Ребенок Родитель
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: what
+          in: path
+          description: Что прокомментировать
+          required: true
+          schema:
+            type: string
+            enum:
+              - lesson
+              - paper
+              - supporter
+      requestBody:
+        required: true
+        description: Изменение комментария
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mark_id:
+                  type: integer
+                  description: ID комментария который надо изменить
+                change:
+                  $ref: '#/components/schemas/MarkSend'
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Mark'
+        '400':
+          description: Неправильный ID урока или уже оставлен комментарий.
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    delete:
+      summary: Удаление комментария
+      description: Удаление комментария по его ID
+      tags:
+        - Назначение - Работа со сторонними обьектами и людьми
+        - Доступ - Ребенок Родитель
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: id
+          in: query
+          description: ID комментария
+          required: true
+          schema:
+            type: integer
+        - name: what
+          in: path
+          description: Что прокомментировать
+          required: true
+          schema:
+            type: string
+            enum:
+              - lesson
+              - paper
+              - supporter
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Неправильный ID
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    get:
+      summary: Получение всех комментариев пользователя
+      description: Получение всех комментариев пользователя
+      tags:
+        - Назначение - Работа со сторонними обьектами и людьми
+        - Доступ - Ребенок Родитель
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: what
+          in: path
+          description: Что прокомментировать
+          required: true
+          schema:
+            type: string
+            enum:
+              - lesson
+              - paper
+              - supporter
+        - name: limit
+          in: query
+          description: Лимит количества возвращенных уроков. По умолчанию 75 максимально 300.
+          required: false
+          schema:
+            type: integer
+        - name: from
+          in: query
+          description: Начиниая с элемета( Нужно для динамической подгрузки страницы )
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Mark'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /child:
+    post:
+      summary: Создание ребенка
+      description: Создание ребенка и автоматическое прикрепление его к родителю
+      tags:
+        - Доступ - Родитель
+        - Защита от дурака - Action token
+        - Назначение - Работа со сторонними обьектами и людьми
+      security:
+        - accessCookie: [ ]
+        - actionToken: [ ]
+      requestBody:
+        required: true
+        description: Данные для регистрации пользователя
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChildCreate'
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Неверные данные
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован или Action token устарел
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    delete:
+      summary: Удаление ребенка
+      description: Удаляет ребенка со всеми его медиа данными, историей уроков и т.д
+      tags:
+        - Доступ - Родитель
+        - Защита от дурака - Action token
+        - Назначение - Работа со сторонними обьектами и людьми
+      security:
+        - accessCookie: [ ]
+        - actionToken: [ ]
+      parameters:
+        - name: id
+          in: query
+          description: ID ребенка
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Неверный ID
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован или Action token устарел
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    get:
+      summary: Получение полного обьекта ребенка
+      description: Получение полного обьекта ребенка
+      tags:
+        - Доступ - Родитель
+        - Назначение - Работа со сторонними обьектами и людьми
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: id
+          in: query
+          description: ID ребенка
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Child'
+        '400':
+          description: Неверный ID
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    put:
+      summary: Изменение квот ребенка
+      description: Изменение квот ребенка
+      tags:
+        - Доступ - Родитель
+        - Назначение - Работа со сторонними обьектами и людьми
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: id
+          in: query
+          description: ID ребенка
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        description: Квоты ребенка для изменения
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChildQuotas'
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Child'
+        '400':
+          description: Неверный ID
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /child/{id}/statistic:
+    get:
+      summary: Получение статистики ребенка
+      description: Получение статистики ребенка
+      tags:
+        - Доступ - Родитель
+        - Назначение - Работа со сторонними обьектами и людьми
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: id
+          in: path
+          description: ID ребенка
+          required: true
+          schema:
+            type: integer
+        - name: start_period
+          in: query
+          description: Дата начала переода статистики в UNIX
+          required: true
+          schema:
+            type: integer
+        - name: end_period
+          in: query
+          description: Дата окончания переода статистики в UNIX
+          required: true
+          schema:
+            type: integer
+        - name: step
+          in: query
+          description: Шаг переода в UNIX. Например 86400 - это шаг в один день
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChildStatistic'
+        '400':
+          description: Неверный ID или данные о переоде
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /children:
+    get:
+      summary: Получение всех детей
+      description: Получение всех детей привязанных к пользователю
+      tags:
+        - Доступ - Родитель
+        - Назначение - Работа со сторонними обьектами и людьми
+      security:
+        - accessCookie: [ ]
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserMinimalistic'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /invite:
+    post:
+      summary: Пригласить пользователя
+      description: Отправить пользователю приглашение на становление ребенком
+      tags:
+        - Назначение - Работа со сторонними обьектами и людьми
+        - Доступ - Родитель
+        - Защита от дурака - Action token
+      security:
+        - accessCookie: [ ]
+        - actionToken: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  description: ID пользователя
+                message:
+                  type: string
+                  description: Комментарий(сообщение) пользователю которое он увидит при просмотре приглашения
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invitation'
+        '400':
+          description: Неправильный ID пользователя или уже оставлена заявка.
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован или Action token устарел
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    delete:
+      summary: Удаление приглашение
+      description: Удаление
+      tags:
+        - Назначение - Работа со сторонними обьектами и людьми
+        - Доступ - Родитель
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: id
+          in: query
+          description: ID приглашения
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    get:
+      summary: Получение всех своих приглашений
+      description: Получение всех своих приглашений
+      tags:
+        - Назначение - Работа со сторонними обьектами и людьми
+        - Доступ - Родитель
+      security:
+        - accessCookie: [ ]
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invitation'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /media/{type}:
+    post:
+      summary: Загрузка файла
+      description: Загружает файл
+      tags:
+        - Доступ - Любой авторизованный
+        - Назначение - Работа со сторонними обьектами и людьми
+      security:
+        - accessCookie: []
+      parameters:
+        - name: type
+          in: path
+          description: Тип загружаемого файла
+          required: true
+          schema:
+            type: string
+            enum:
+              - photo
+              - text
+              - pdf
+              - other_document
+              - presentation
+              - video
+      requestBody:
+        required: true
+        description: Данные файла и сам файл
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                file_name:
+                  type: string
+                  description: Имя файла
+                file_format:
+                  type: string
+                  description: Формат файла. Если значение auto то определяется автоматически.
+                access:
+                  type: string
+                  description: Круг доступа к файлу
+                  enum:
+                    - personal
+                    - link
+                    - room
+                    - public
+                file:
+                  type: string
+                  format: binary
+                  description: Файл
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/File'
+        '400':
+          description: Неверные данные или формат файла
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован или диск переполнен
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    delete:
+      summary: Удаление файла
+      description: Удаляет файл
+      tags:
+        - Доступ - Любой авторизованный
+        - Назначение - Работа со сторонними обьектами и людьми
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: type
+          in: path
+          description: Тип файла
+          required: true
+          schema:
+            type: string
+            enum:
+              - photo
+              - text
+              - pdf
+              - other_document
+              - presentation
+              - video
+        - name: id
+          in: query
+          description: ID файла
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Неправильный ID файла.
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован или нету доступа к файлу
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /person/{by}/{value}:
+    get:
+      summary: Поиск и получение пользователей по совпадению с данными
+      description: Поиск и получение пользователей по совпадению с данными
+      tags:
+        - Доступ - Без авторизации
+        - Назначение - Работа со сторонними обьектами и людьми
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: by
+          in: path
+          description: ID ребенка
+          required: true
+          schema:
+            type: integer
+        - name: value
+          in: path
+          description: Дата начала переода статистики в UNIX
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserMinimalistic'
+        '400':
+          description: Неверные параметры
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+
+  # Админка
+  /admin/subject:
+    post:
+      summary: Создание предмета
+      description: Создание нового предмета
+      tags:
+        - Назначение - Админка
+        - Доступ - Админ
+      security:
+        - accessCookie: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Название предмета (Например Физика)
+                photo:
+                  type: string
+                  description: ID фотографии - иконки предмета
+                description:
+                  type: string
+                  description: Описание предмета
+                static_id:
+                  type: string
+                  description: Ссылка на страницу предмета(из Admin/Paper)
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subject"
+        '400':
+          description: Неправильные данные или такой предмет уже существует.
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    delete:
+      summary: Удаление предмета
+      description: Удаляет предмет со свеми его медиа данными и статическими страницами
+      tags:
+        - Назначение - Админка
+        - Доступ - Админ
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: id
+          in: query
+          description: ID предмета
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Неверный ID
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    put:
+      summary: Изменение изменение предмета
+      description: Изменение изменение предмета
+      tags:
+        - Назначение - Админка
+        - Доступ - Админ
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: id
+          in: query
+          description: ID предмета
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        description: Измененный предмет
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Название предмета (Например Физика)
+                photo:
+                  type: string
+                  description: ID фотографии - иконки предмета
+                description:
+                  type: string
+                  description: Описание предмета
+                static_id:
+                  type: string
+                  description: Ссылка на страницу предмета(из Admin/Paper)
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Subject'
+        '400':
+          description: Неверный ID
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /admin/grade:
+    post:
+      summary: Создание класса
+      description: Создание нового класса
+      tags:
+        - Назначение - Админка
+        - Доступ - Админ
+      security:
+        - accessCookie: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Название класса
+                description:
+                  type: string
+                  description: Описание класса
+                photo:
+                  type: string
+                  description: Логотип класса
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Grade"
+        '400':
+          description: Неправильные данные или такой предмет уже существует.
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    delete:
+      summary: Удаление класса
+      description: Удаляет класс со свеми его медиа данными
+      tags:
+        - Назначение - Админка
+        - Доступ - Админ
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: id
+          in: query
+          description: ID класса
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Неверный ID
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    put:
+      summary: Изменение изменение класса
+      description: Изменение изменение класса
+      tags:
+        - Назначение - Админка
+        - Доступ - Админ
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: id
+          in: query
+          description: ID класса
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        description: Измененный предмет
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Название класса
+                description:
+                  type: string
+                  description: Описание класса
+                photo:
+                  type: string
+                  description: Логотип класса
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Grade'
+        '400':
+          description: Неверный ID
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /admin/teacher:
+    post:
+      summary: Ответ на заявку
+      description: Ответ на заявку на присвоение статуса учителя.
+      tags:
+        - Назначение - Админка
+        - Доступ - Админ
+      security:
+        - accessCookie: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplianceAnswer'
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplianceStatus'
+        '400':
+          description: Уже оставлена заявка.
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован или Action token устарел
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    get:
+      summary: Получение всех заявок
+      description: Получение всех заявок на присвоение статуса учителя
+      tags:
+        - Назначение - Админка
+        - Доступ - Админ
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: limit
+          in: query
+          description: Лимит количества возвращенных уроков. По умолчанию 25 максимально 100.
+          required: false
+          schema:
+            type: integer
+        - name: from
+          in: query
+          description: Начиниая с элемета( Нужно для динамической подгрузки страницы )
+          required: false
+          schema:
+            type: integer
+        - name: filter
+          in: query
+          description: Правила фильтрации
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties:
+                    appliance:
+                      $ref: '#/components/schemas/TeacherAppliance'
+                    appliance_status:
+                      $ref: '#/components/schemas/ApplianceStatus'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+
+  # Поддержка
+  /supporter:
+    get:
+      summary: Получение рекомендованных проблем
+      description: Получение рекомендованных проблем для менеджера по поддержке
+      tags:
+        - Назначение - Поддержка
+        - Доступ - Поддержка
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: limit
+          in: query
+          description: Лимит количества возвращенных уроков. По умолчанию 25 максимально 100.
+          required: false
+          schema:
+            type: integer
+        - name: from
+          in: query
+          description: Начиниая с элемета( Нужно для динамической подгрузки страницы )
+          required: false
+          schema:
+            type: integer
+        - name: filter
+          in: query
+          description: Правила фильтрации
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+    post:
+      summary: Ответить на проблему
+      description: Начало урока из заявок или принудителное завершение урока в обход чата(в случае технических неполадок). Заморозить урок
+      tags:
+        - Назначение - Поддержка
+        - Доступ - Поддержка
+      security:
+        - accessCookie: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  description: ID обращения
+                message:
+                  type: string
+                  description: Короткий ответ или уточняющий вопрос для начала диалога
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '400':
+          description: Неправильный ID урока
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/StandardErrorResponse'
+  /support:
+    get:
+      summary: Получение конкретного обращения
+      description: Получение конкретной обращения
+      tags:
+        - Доступ - Любой авторизованный
+        - Назначение - Работа с обьектом себя
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: id
+          in: query
+          description: ID обращения
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '400':
+          description: Неверный ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+    post:
+      summary: Создание обращения в поддержку
+      description: Создание обращения в поддержку
+      tags:
+        - Доступ - Учитель Ребенок Родитель
+        - Назначение - Работа с обьектом себя
+      security:
+        - accessCookie: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                question:
+                  type: string
+                  description: Проблема в двух словах
+                description:
+                  type: string
+                  description: Подробное описание проблемы
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '400':
+          description: Неверные данные.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+    delete:
+      summary: Удаление конкретной обращения
+      description: Получение конкретной проблемы
+      tags:
+        - Доступ - Учитель Ребенок Родитель
+        - Назначение - Работа с обьектом себя
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: id
+          in: query
+          description: ID обращения
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+        '400':
+          description: Неверный ID или на проблему уже ответили.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+    put:
+      summary: Создание обращения в поддержку
+      description: Создание обращения в поддержку
+      tags:
+        - Доступ - Учитель Ребенок Родитель
+        - Назначение - Работа с обьектом себя
+      security:
+        - accessCookie: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                id:
+                  type: integer
+                  description: ID обращения которое надо исправить
+                question:
+                  type: string
+                  description: Проблема в двух словах
+                description:
+                  type: string
+                  description: Подробное описание проблемы
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '400':
+          description: Неверный ID илил данные.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+  /problems:
+    get:
+      summary: Получение своих проблем
+      description: Получение всех своих обращений в службу поддержки. Для самой поддержки - обращений к ней.
+      tags:
+        - Назначение - Работа с обьектом себя
+        - Доступ - Любой авторизованный
+      security:
+        - accessCookie: [ ]
+      parameters:
+        - name: limit
+          in: query
+          description: Лимит количества возвращенных уроков. По умолчанию 25 максимально 100.
+          required: false
+          schema:
+            type: integer
+        - name: from
+          in: query
+          description: Начиниая с элемета( Нужно для динамической подгрузки страницы )
+          required: false
+          schema:
+            type: integer
+        - name: filter
+          in: query
+          description: Правила фильтрации
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успех
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Problem'
+        '401':
+          description: Пользователь не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Внутренняя ошибка на сервере
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+
+
+components:
+  securitySchemes:
+    accessCookie:
+      type: apiKey
+      in: cookie
+      name: access
+
+    actionToken:
+      type: apiKey
+      in: cookie
+      name: action
+
+  schemas:
+    StandardResponse:
+      type: object
+      description: Стандартный ответ от сервера
+      properties:
+        code:
+          type: integer
+          example: 200
+          description: Код ответа(Обычно совпадает с HTTP кодом но может и отличаться)
+        message:
+          type: string
+          example: Successfully created/added/deleted ....
+          description: Сообщение(указывается стандарнтная строка как в примере)
+    StandardErrorResponse:
+      type: object
+      description: Стандартный ответ от сервера в случае ошибки.
+      properties:
+        code:
+          type: integer
+          example: 401
+          description: Код ответа (Обычно совпадает с HTTP кодом но может и отличаться)
+        error:
+          type: string
+          example: NAUE
+          description: Внутренний код ошибки в системе. Может пригодится для поддержки.
+        message:
+          type: string
+          example: Error Not Authorized!
+          description: Сообщение ошибки. Указывается примерная причина ошибки при этом сама ошибка в сообщение не идет по причине DataLeak
+    Change:
+      type: object
+      properties:
+        changes:
+          type: array
+          items:
+            properties:
+              filed_name:
+                type: string
+                description: Тип изменяемого поля
+                enum:
+                  - name
+                  - email
+                  - phone
+                  - password
+                  - photo
+                  - username
+                  - subject
+                  - about
+                  - grade
+              new_value:
+                type: string
+                description: Новое значение изменяемого поля
+              operation:
+                type: string
+                description: Тип операции изменения
+                enum:
+                  - change
+                  - add
+                  - delete
+
+    User:
+      type: object
+      description: Полный обьект пользователя
+      properties:
+        name:
+          type: string
+          description: Полное имя пользователя
+        email:
+          type: string
+          format: email
+          description: Успешен ли вход в систему
+        phone:
+          type: string
+          format: phone
+          description: Телефон пользователя
+        photo:
+          type: string
+          description: ID Фотографии профиля человека
+        email_confirmed:
+          type: boolean
+          description: Подтвержден ли Email
+        phone_conformed:
+          type: boolean
+          description: Подтвержден ли телефон
+        devices:
+          type: array
+          items:
+            properties:
+              name:
+                type: string
+                description: Имя устройства
+              agent:
+                type: string
+                description: Браузер с которого был произведен вход
+              date:
+                type: integer
+                description: Дата и Время входа
+          description: Списк устройств на которых есть активный Refresh
+        user_type:
+          $ref: '#/components/schemas/UserRoles'
+        balance:
+          type: integer
+          description: Баланс пользователя
+        disk:
+          type: integer
+          description: Сколько занято места под файлы
+        disk_size:
+          type: integer
+          description: Максимально занимаемое место
+        notifications:
+          type: array
+          items:
+            properties:
+              name:
+                type: string
+                description: Имя уведомления
+              date:
+                type: integer
+                description: Дата создания уведмления
+              description:
+                type: string
+                description: Описание уведомления
+              link:
+                type: string
+                description: Ссылка на уведомление или дествие (Может и не быть)
+              read:
+                type: boolean
+                description: Прочитано ли уведомление
+    Mark:
+      type: object
+      description: Полный обьект комментария
+      properties:
+        mark:
+          type: integer
+          description: Оценка по шкале от 0 до 10
+          enum:
+            - 0
+            - 1
+            - 2
+            - 3
+            - 4
+            - 5
+            - 6
+            - 7
+            - 8
+            - 9
+            - 10
+        comment:
+          type: string
+          description: Комментарий
+        date:
+          type: integer
+          description: Дата оставления комментария
+        userid:
+          type: integer
+          description: ID Пользователя оставившего комментарий
+        edited:
+          type: integer
+          description: Дата и Время изменения комментария. Если не менялся то 0
+    Teacher:
+      type: object
+      description: Полный обьект учителя
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        mark:
+          type: integer
+          description: Общая рейтинг учителя
+        about:
+          type: string
+          description: Самопредставление учителя
+        subjects:
+          type: array
+          items:
+            $ref: '#/components/schemas/Subject'
+        marks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Mark'
+    Subject:
+      type: object
+      description: Предмет (Например Физика, Математика и т.д)
+      properties:
+        id:
+          type: integer
+          description: ID Предмета в БД
+        name:
+          type: string
+          description: Название предмета (Например Физика)
+        photo:
+          type: string
+          description: ID фотографии - иконки предмета
+        description:
+          type: string
+          description: Описание предмета
+        static_id:
+          type: string
+          description: Ссылка на страницу предмета
+    Lesson:
+      type: object
+      description: Полный обьект урока
+      properties:
+        id:
+          type: integer
+          format: uint
+          description: ID урока
+        status:
+          type: string
+          description: Текущий статус урока
+          enum:
+            - pending
+            - paused
+            - ended
+        status_description:
+          type: string
+          description: Описания статуса - для pending Поиск учителя, для paused ended Сообщение которое оставил учитель
+        subject:
+          $ref: '#/components/schemas/Subject'
+        cost:
+          type: integer
+          description: Итоговая цена урока
+        time_started:
+          type: integer
+          description: Время начала урока
+        time_ended:
+          type: integer
+          description: Время оканчания урока
+        student:
+          $ref: '#/components/schemas/User'
+        teacher:
+          $ref: '#/components/schemas/Teacher'
+        question:
+          type: string
+          description: Вопрос который задал ученик
+        comment:
+          $ref: '#/components/schemas/Mark'
+        pauses:
+          type: array
+          description: Все паузы поисходившие за урок
+          items:
+            properties:
+              time_start:
+                type: integer
+                description: Время начала паузы
+              time_end:
+                type: integer
+                description: Время окончания паузы
+              total_time:
+                type: integer
+                description: Общее время паузы
+        room_id:
+          type: string
+          format: uuid
+          description: ID чата в котором будет происходить урок.
+    Room:
+      type: object
+      description: Полный обьект чата
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID чата это UUID
+        name:
+          type: string
+          description: Название чата. Для урока - Вопрос ученика. Для обращения в поддержку - проблема.
+        message_count:
+          type: integer
+          description: Количество сообщений
+        time_started:
+          type: integer
+          description: Время начала урока
+        time_ended:
+          type: integer
+          description: Время оканчания урока. Если время рано 0 то чат до сих пор открыт и в него можно попасть
+        people:
+          type: array
+          description: Список лдей принимавших участие в чате
+          items:
+            properties:
+              name:
+                type: string
+                description: Имя человека
+              photo:
+                type: string
+                description: ID фотографии пользователя
+              user_level:
+                type: string
+                description: Категория человека
+                enum:
+                  - child
+                  - general
+                  - teacher
+                  - supporter
+                  - admin
+    Message:
+      type: object
+      description: Полный обьект сообщения
+      properties:
+        id:
+          type: integer
+          description: ID сообщения
+        sender_id:
+          type: integer
+          description: ID Отправителя
+        date:
+          type: integer
+          description: Дата и Время отправления
+        message:
+          type: string
+          description: Само сообщение
+        replied:
+          type: integer
+          description: ID сообщения от которого "отреплаили" данное. Если нет такого то 0
+    Child:
+      type: object
+      description: Полный обькет ребенка
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        grade:
+          $ref: '#/components/schemas/Grade'
+        about:
+          type: string
+          description: О себе. Интересы, увлечения, итд
+        quotas:
+          type: object
+          description: Квоты ребенка
+          properties:
+            time:
+              type: integer
+              description: Максимальное общее время в минутах занятий в день
+            number:
+              type: integer
+              description: Максимальное количество занятий
+            time_per_lesson:
+              type: integer
+              description: Максимальное время одного занятия
+    Invitation:
+      type: object
+      description: Полный обьект приглашения
+      properties:
+        id:
+          type: integer
+          description: ID приглашения
+        sender:
+          $ref: '#/components/schemas/UserMinimalistic'
+        receiver:
+          $ref: '#/components/schemas/UserMinimalistic'
+        message:
+          type: string
+          description: Сообщение прикрепленное к приглашению
+        date:
+          type: integer
+          description: Дата и Время сотправки приглашения
+        date_accepted:
+          type: integer
+          description: Дата когда приглашение было принято. Если нет то 0
+    Grade:
+      type: object
+      description: Полный обьект класса
+      properties:
+        id:
+          type: integer
+          description: ID класса
+        name:
+          type: string
+          description: Название класса
+        description:
+          type: string
+          description: Описание класса
+        photo:
+          type: string
+          description: Логотип класса
+    BillingAccount:
+      type: object
+      description: Полный обьект биллиг аккунта пользователя
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID биллинг-аккаунта
+        balance:
+          type: integer
+          description: Баланс аккаунта
+        statistic:
+          $ref: '#/components/schemas/BillingStatistic'
+        transactions:
+         type: array
+         items:
+           $ref: '#/components/schemas/Transation'
+    Problem:
+      type: object
+      description: Обращение пользователя в поддержку
+      properties:
+        id:
+          type: integer
+          description: ID бращения
+        question:
+          type: string
+          description: Проблема в двух словах
+        description:
+          type: string
+          description: Подробное описание проблемы
+        date:
+          type: integer
+          description: Дата и Время создания обращения
+        user:
+          $ref: '#/components/schemas/UserMinimalistic'
+        date_answered:
+          type: integer
+          description: Дата и Время когда пользователю ответили. Если еще нет - 0
+        room_id:
+          type: string
+          format: uuid
+          description: ID чата где происходило обсуждение проблемы
+        supporter:
+          $ref: '#/components/schemas/SupporterMinimalistic'
+    Transation:
+      type: object
+      description: Транзакция
+      properties:
+        id:
+          type: integer
+          description: ID транзакции
+        sender:
+          $ref: '#/components/schemas/UserMinimalistic'
+        receiver:
+          $ref: '#/components/schemas/UserMinimalistic'
+        amount:
+          type: integer
+          description: Сумма транзакции
+        date:
+          type: integer
+          description: Дата и Время совершения транзакции
+    Paper:
+      type: object
+      description: Статья
+      properties:
+        id:
+          type: integer
+          description: ID статьи
+        name:
+          type: string
+          description: Название статьи
+        description:
+          type: string
+          description: Описание статьи(Нужно при отображения списком)
+        date:
+          type: integer
+          description: Дата публикации
+        body:
+          type: string
+          description: Сама статья в формате Own Modified Markdown (.OMMD)
+        views:
+          type: integer
+          description: Количество просмотров
+        mid_deep:
+          type: integer
+          description: Средняя глубина просмотра для этой статьи
+        comments:
+          type: array
+          description: Комментарии
+          items:
+            $ref: '#/components/schemas/Mark'
+        mid_mark:
+          type: integer
+          description: Средняя оценка
+    Supporter:
+      type: object
+      description: Менеджер по поддержке
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        mark:
+          type: integer
+          description: Общая рейтинг
+        marks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Mark'
+    File:
+      type: object
+      description: Обьект файла
+      properties:
+        id:
+          type: string
+          description: ID записи о файле
+        access:
+          type: string
+          description: Круг доступа к файлу
+          enum:
+            - personal
+            - link
+            - room
+            - public
+        name:
+          type: string
+          description: Имя файла
+        format:
+          type: string
+          description: Формат файла. Если значение auto то определяется автоматически.
+        type:
+          type: string
+          enum:
+            - photo
+            - text
+            - pdf
+            - other_document
+            - presentation
+            - video
+
+    LessonMinimalistic:
+      type: object
+      description: Минималистичный обьект урока (Для отправки в качестве списка уроков)
+      properties:
+        id:
+          type: integer
+          format: uint
+          description: ID урока
+        subject:
+          $ref: '#/components/schemas/Subject'
+        cost:
+          type: integer
+          description: Итоговая цена урока
+        time_started:
+          type: integer
+          description: Время начала урока
+        time_ended:
+          type: integer
+          description: Время оканчания урока
+        student:
+          $ref: '#/components/schemas/UserMinimalistic'
+        teacher:
+          $ref: '#/components/schemas/TeacherMinimalistic'
+        question:
+          type: string
+          description: Вопрос который задал ученик
+    TeacherMinimalistic:
+      type: object
+      description: Минималистичный обьект учителя (Для отправки в качестве списка учителей)
+      properties:
+        user:
+          $ref: '#/components/schemas/UserMinimalistic'
+        mark:
+          type: integer
+          description: Общая рейтинг учителя
+        about:
+          type: string
+          description: Самопредставление учителя
+        subjects:
+          type: array
+          items:
+            properties:
+              id:
+                type: integer
+                description: ID предмета
+              name:
+                type: string
+                description: Название предмета
+    UserMinimalistic:
+      type: object
+      description: Минималистичный обьект пользователя (Для отправки в качестве списка пользователей)
+      properties:
+        name:
+          type: string
+          description: Имя ученика
+        username:
+          type: string
+          description: Имя пользователя ученика
+        photo:
+          type: string
+          description: ID фотографии пользователя
+        email:
+          type: string
+          format: email
+          description: Успешен ли вход в систему
+        phone:
+          type: string
+          format: phone
+          description: Телефон пользователя
+        user_type:
+          $ref: '#/components/schemas/UserRoles'
+    RoomMinimalistic:
+      type: object
+      description: Минималистичный обьект чата (Для отправки в качестве списка чатов)
+      properties:
+        id:
+          type: string
+          format: uint
+          description: ID чата
+        time_started:
+          type: integer
+          description: Время начала урока
+        time_ended:
+          type: integer
+          description: Время оканчания урока. Если время рано 0 то чат до сих пор открыт и в него можно попасть
+        people:
+          type: array
+          description: Список лдей принимавших участие в чате
+          items:
+            properties:
+              name:
+                type: string
+                description: Имя человека
+              photo:
+                type: string
+                description: ID фотографии пользователя
+              user_level:
+                type: string
+                description: Категория человека
+                enum:
+                  - child
+                  - general
+                  - teacher
+                  - supporter
+                  - admin
+    PaperMinimalistic:
+      type: object
+      description: Минималистичное представление статьи
+      properties:
+        id:
+          type: integer
+          description: ID статьи
+        name:
+          type: string
+          description: Название статьи
+        description:
+          type: string
+          description: Описание статьи(Нужно при отображения списком)
+        date:
+          type: integer
+          description: Дата публикации
+        views:
+          type: integer
+          description: Количество просмотров
+        mid_mark:
+          type: integer
+          description: Средняя оценка
+    SupporterMinimalistic:
+      type: object
+      description: Менеджер по поддержке
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        mark:
+          type: integer
+          description: Общая рейтинг
+
+    ChildStatistic:
+      type: object
+      description: Единица статистики
+      properties:
+        papers_read:
+          type: array
+          description: График истории прочтения статей
+          items:
+            properties:
+              date:
+                type: object
+                description: Дата точки на графике
+                properties:
+                  start:
+                    type: integer
+                    description: Начало переода
+                  end:
+                    type: integer
+                    description: Конец переода
+              count:
+                type: integer
+                description: Количество прочитанных статей
+              mid_deep:
+                type: integer
+                description: Средняя глубина прочтения за переод
+        lessons:
+          type: array
+          description: График прохождения уроков
+          items:
+            properties:
+              date:
+                type: object
+                description: Дата точки на графике
+                properties:
+                  start:
+                    type: integer
+                    description: Начало переода
+                  end:
+                    type: integer
+                    description: Конец переода
+              count:
+                type: integer
+                description: Количество уроков
+              mid_time:
+                type: integer
+                description: Среднее время урока
+              total_time:
+                type: integer
+                description: Итоговое время уроков за переод
+    BillingStatistic:
+      type: object
+      description: Статистика денег
+      properties:
+        money_spend:
+          type: array
+          description: График траты минут
+          items:
+            properties:
+              date:
+                type: object
+                description: Дата точки на графике
+                properties:
+                  start:
+                    type: integer
+                    description: Начало переода
+                  end:
+                    type: integer
+                    description: Конец переода
+              total_amount:
+                type: integer
+                description: Потрачено всего
+              mid_amount:
+                type: integer
+                description: Средняя трата
+
+    TeacherAppliance:
+      type: object
+      description: Заявка пользователя на присвоение статуса учителя.
+      properties:
+        real_name:
+          type: object
+          description: Настоящее имя
+          properties:
+            name:
+              type: string
+              description: Имя
+            surname:
+              type: string
+              description: Фамилия
+            fathers_name:
+              type: string
+              description: Отчество
+        date_of_birth:
+          type: integer
+          description: Дата рождения
+        experience:
+          type: array
+          description: Места работы и время работы на них
+          items:
+            properties:
+              start_date:
+                type: integer
+                description: Дата с которй работает
+              end_date:
+                type: integer
+                description: Дата завершения рабты в этом месте. Если по н.в. то 0
+              company_name:
+                type: string
+                description: Название школы, универститета, организации.
+              recommendation_letter:
+                type: integer
+                description: ID файла с рекомендательным письмом. Если нету - 0
+        about:
+          type: string
+          description: Самопредставление учителя. Выделение своих сильных и слабых сторон и всякая такая херь
+        education:
+          type: array
+          description: Места учебы, длительность, специальность и др
+          items:
+            properties:
+              start_date:
+                type: integer
+                description: Дата с которй учился
+              end_date:
+                type: integer
+                description: Дата завершения учебы. Если по н.в. то 0
+              university:
+                type: string
+                description: Название школы, универститета.
+              profession:
+                type: string
+                description: Специальность на которую учился
+              diploma:
+                type: integer
+                description: ID файла с рекомендательным дипломом. Если нету - 0
+        why:
+          type: string
+          description: Почему хочет работать с нами? Откуда о нас узнал
+        comment:
+          type: string
+          description: Сообщение для квалификационной комиссии
+    ApplianceStatus:
+      type: object
+      description: Статус заявки в учителя
+      properties:
+        status:
+          type: string
+          description: Статус заявки
+          enum:
+            - received
+            - waiting
+            - seen
+            - decided
+            - answered
+        answer:
+          type: string
+          description: Ответ комиссии.
+          example: Сбасибо за обращение! С радостью сообщаем вам что мы приняли решение удовлитворить вашу заявку.
+            Условия работы с нами и договор отправили вам на почту. Пожалуйста ответьте нам и сообщите устраивают ли вас описанные в письме условия.
+        date_answered:
+          type: integer
+          description: Дата когда коллегия ответила.
+    ApplianceAnswer:
+      type: object
+      description: Ответ на заявку
+      properties:
+        answer:
+          type: string
+          description: Ответ комиссии.
+          example: Сбасибо за обращение! С радостью сообщаем вам что мы приняли решение удовлитворить вашу заявку.
+            Условия работы с нами и договор отправили вам на почту. Пожалуйста ответьте нам и сообщите устраивают ли вас описанные в письме условия.
+        status:
+          type: string
+          description: Статус заявки
+          enum:
+            - received
+            - waiting
+            - seen
+            - decided
+            - answered
+
+    UserRoles:
+      type: string
+      enum:
+        - child
+        - general
+        - teacher
+        - supporter
+        - admin
+      description: Уровень доступа пользователя
+
+    # Вторичные вынесенные схемы
+    Info:
+      type: object
+      description: Информация об API
+      properties:
+        app:
+          type: string
+          description: Название службы
+        version:
+          type: string
+          example: v1.1
+          description: Версия службы
+        description:
+          type: string
+          description: Описание службы
+        licence:
+          type: string
+          description: Лицензия по которой распространяется исходный код службы
+          example: https://dev.justnets.ru/licence
+        links:
+          type: array
+          description: Ссылки на документацию, сайт организации и т.п.
+          items:
+            type: string
+          example: [ 'https://dev.justnets.ru/', 'https://github.com/INebotov/FivePlus' ]
+    Health:
+      type: object
+      description: Здоровье и статистика истансы
+      properties:
+        requests:
+          type: integer
+          description: Общее количество запроссов к службе.
+        ok_Requests:
+          type: integer
+          description: Количество успрешных запросов.
+        auth_bad_requests:
+          type: integer
+          description: Количество неуспешных запросов по причине отсудствия прав доступа.
+        bad_request:
+          type: integer
+          description: Количество неуспешных запросов с неправильным телом запроса.
+        errors:
+          type: integer
+          description: Количество внутренних некритичных ошибок
+        memory:
+          type: integer
+          description: Общий размер занимаемой памяти инстансой
+
+    Is:
+      type: array
+      description: Ответ о правильности телефона, имени пользователя, email'а
+      items:
+        properties:
+          value:
+            type: string
+            description: Строка которая проверялась
+          is:
+            type: boolean
+            description: Занято ли имя пользователя, телефон, email
+    Hi:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          format: uint
+          description: ID пользователя
+        private_ok:
+          type: boolean
+          description: Успешен ли вход в систему
+
+    Reg:
+      type: object
+      description: Запрос на регистрацию пользователя
+      properties:
+        user_name:
+          type: string
+          description: Имя пользователя
+        name:
+          type: string
+          description: Полное имя человека
+        email:
+          type: string
+          format: email
+          description: Eamil пользователя
+        phone:
+          type: string
+          format: phone
+          description: Телефон пользователя
+        password:
+          type: string
+          description: Пароль пользователя
+    Login:
+      type: object
+      description: Запрос на вход пользователя
+      properties:
+        login_by:
+          type: string
+          description: Что использовать для входа
+          enum:
+            - email
+            - phone
+            - username
+        login:
+          type: string
+          description: То что указано в login_by. Email Телефон или Имя пользователя
+        password:
+          type: string
+          description: Пароль пользователя
+
+    RequestALesson:
+      type: object
+      properties:
+        question:
+          type: string
+          description: Вопрос по которому в основном пройдет урок
+        subject_id:
+          type: integer
+          description: ID предмета по которому пройдет урок.
+        time:
+          type: integer
+          description: Примерное время которое займет занятие по мнению ученика. !Не точная величина урок может длится как > так и <
+
+    MarkSend:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID комментируемой сущьности
+        mark:
+          type: integer
+          description: Оценка по шкале от 0 до 10
+          enum:
+            - 0
+            - 1
+            - 2
+            - 3
+            - 4
+            - 5
+            - 6
+            - 7
+            - 8
+            - 9
+            - 10
+        comment:
+          type: string
+          description: Комментарий
+    ChildCreate:
+      type: object
+      description: Запрос на регистрацию пользователя
+      properties:
+        user_name:
+          type: string
+          description: Имя пользователя
+        name:
+          type: string
+          description: Полное имя человека
+        email:
+          type: string
+          format: email
+          description: Eamil пользователя
+        same_email:
+          type: boolean
+          description: Тот же Email что и у родителя
+        phone:
+          type: string
+          format: phone
+          description: Телефон пользователя
+        same_phone:
+          type: boolean
+          description: Тот же телефон что и у родителя
+        password:
+          type: string
+          description: Пароль ребенка
+        password_set_on_login:
+          type: boolean
+          description: Устанавливается ли пароль не сейчас а при первом входе ребенка в систему
+    ChildQuotas:
+      type: object
+      properties:
+        time:
+          type: integer
+          description: Максимальное общее время в минутах занятий в день. -1 - Безлимит
+        number:
+          type: integer
+          description: Максимальное количество занятий. -1 - Безлимит
+        time_per_lesson:
+          type: integer
+          description: Максимальное время одного занятия. -1 - Безлимит
+
+    InvLink:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID ссылки-приглашения
+        link:
+          type: string
+          description: Ссылка-приглашение
+        live_untill:
+          type: integer
+          description: Дата до которой жива ссылка
+        date_created:
+          type: integer
+          description: Дата создания ссылки
+        count:
+          type: integer
+          description: Количество пользователей подключившихся по ссылке
